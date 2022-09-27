@@ -1,0 +1,71 @@
+version: "3"
+
+services:
+  api:
+    build:
+      context: ./api
+      target: prod
+    container_name: api
+    env_file:
+      - ./.env
+    environment:
+      - NODE_ENV=production
+    networks:
+     - db_network
+     - api_network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.api.rule=HostRegexp(`{catchall:.*}`) && PathPrefix(`/api/`, `/socket.io/`, `/docs`, `/public/`)"
+      - "traefik.http.routers.api.entrypoints=web"
+      - "traefik.http.services.api.loadbalancer.server.port=3000"
+      - "traefik.docker.network=ft_transcendence_api_network"
+    restart: on-failure:3
+
+  frontend:
+    build:
+      context: ./frontend
+      target: prod
+    container_name: frontend
+    environment:
+      - NODE_ENV=production
+    volumes:
+     - ./Caddyfile:/etc/caddy/Caddyfile
+    networks:
+     - api_network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.frontend.rule=HostRegexp(`{catchall:.*}`)"
+      - "traefik.http.routers.frontend.entrypoints=web"
+      - "traefik.http.services.frontend.loadbalancer.server.port=3000"
+      - "traefik.docker.network=ft_transcendence_api_network"
+    restart: on-failure:3
+
+  traefik:
+    image: "traefik:vacherin"
+    container_name: "traefik"
+    networks:
+      - api_network
+    command:
+      - "--log.level=ERROR"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+    ports:
+      - "8080:80"
+    volumes:
+      - "${DOCKER_SOCK}:/var/run/docker.sock:ro"
+
+  db:
+    container_name: postgres
+    image: postgres:alpine
+    restart: always
+    env_file:
+      - ./.env
+    networks:
+     - db_network
+    volumes:
+     - /var/lib/postgresql/data
+
+networks:
+  db_network:
+  api_network:
