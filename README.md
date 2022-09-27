@@ -1,5 +1,7 @@
 # FT_TRANSCENDENCE
 
+Big final group project. The goal is to make a fully working and professional website where players can play pong, chat, add friends, etc.
+
 ## First run
 
 You can use `env_conf.sh` for automatic setup
